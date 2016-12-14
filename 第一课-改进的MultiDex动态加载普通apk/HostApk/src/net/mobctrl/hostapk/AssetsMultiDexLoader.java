@@ -1,4 +1,4 @@
-package net.mobctrl.hostapk;
+package van.dahang.com.apkplugin;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -21,14 +21,15 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
 import android.util.Log;
+
 import dalvik.system.DexFile;
 
 /**
+ * @version $Id: AssetsDex.java, v 0.1 2015年12月10日 下午5:36:23 mochuan.zhb Exp $
  * @Author Zheng Haibo
  * @Mail mochuan.zhb@alibaba-inc.com
  * @Company Alibaba Group
  * @PersonalWebsite http://www.mobctrl.net
- * @version $Id: AssetsDex.java, v 0.1 2015年12月10日 下午5:36:23 mochuan.zhb Exp $
  * @Description ClassLoader
  */
 public class AssetsMultiDexLoader {
@@ -49,7 +50,7 @@ public class AssetsMultiDexLoader {
 
 	/**
 	 * 安装Assets中的apk文件
-	 * 
+	 *
 	 * @param context
 	 */
 	public static void install(Context context) {
@@ -97,8 +98,8 @@ public class AssetsMultiDexLoader {
 									+ System.getProperty("java.vm.version")
 									+ "\"");
 				}
-				/*
-				 * The patched class loader is expected to be a descendant of
+                /*
+                 * The patched class loader is expected to be a descendant of
 				 * dalvik.system.BaseDexClassLoader. We modify its
 				 * dalvik.system.DexPathList pathList field to append additional
 				 * DEX file entries.
@@ -107,8 +108,8 @@ public class AssetsMultiDexLoader {
 				try {
 					loader = context.getClassLoader();
 				} catch (RuntimeException e) {
-					/*
-					 * Ignore those exceptions so that we don't break tests
+                    /*
+                     * Ignore those exceptions so that we don't break tests
 					 * relying on Context like a android.test.mock.MockContext
 					 * or a android.content.ContextWrapper with a null base
 					 * Context.
@@ -162,8 +163,8 @@ public class AssetsMultiDexLoader {
 			pm = context.getPackageManager();
 			packageName = context.getPackageName();
 		} catch (RuntimeException e) {
-			/*
-			 * Ignore those exceptions so that we don't break tests relying on
+            /*
+             * Ignore those exceptions so that we don't break tests relying on
 			 * Context like a android.test.mock.MockContext or a
 			 * android.content.ContextWrapper with a null base Context.
 			 */
@@ -183,11 +184,13 @@ public class AssetsMultiDexLoader {
 	}
 
 	private static void installSecondaryDexes(ClassLoader loader, File dexDir,
-			List<File> files) throws IllegalArgumentException,
+											  List<File> files) throws IllegalArgumentException,
 			IllegalAccessException, NoSuchFieldException,
 			InvocationTargetException, NoSuchMethodException, IOException {
 		if (!files.isEmpty()) {
-			if (Build.VERSION.SDK_INT >= 19) {
+			if (Build.VERSION.SDK_INT >= 23) {
+				V23.install(loader, files, dexDir);
+			} else if (Build.VERSION.SDK_INT >= 19) {
 				V19.install(loader, files, dexDir);
 			} else if (Build.VERSION.SDK_INT >= 14) {
 				V14.install(loader, files, dexDir);
@@ -200,13 +203,10 @@ public class AssetsMultiDexLoader {
 	/**
 	 * Locates a given field anywhere in the class inheritance hierarchy.
 	 *
-	 * @param instance
-	 *            an object to search the field into.
-	 * @param name
-	 *            field name
+	 * @param instance an object to search the field into.
+	 * @param name     field name
 	 * @return a field object
-	 * @throws NoSuchFieldException
-	 *             if the field cannot be located
+	 * @throws NoSuchFieldException if the field cannot be located
 	 */
 	private static Field findField(Object instance, String name)
 			throws NoSuchFieldException {
@@ -232,18 +232,14 @@ public class AssetsMultiDexLoader {
 	/**
 	 * Locates a given method anywhere in the class inheritance hierarchy.
 	 *
-	 * @param instance
-	 *            an object to search the method into.
-	 * @param name
-	 *            method name
-	 * @param parameterTypes
-	 *            method parameter types
+	 * @param instance       an object to search the method into.
+	 * @param name           method name
+	 * @param parameterTypes method parameter types
 	 * @return a method object
-	 * @throws NoSuchMethodException
-	 *             if the method cannot be located
+	 * @throws NoSuchMethodException if the method cannot be located
 	 */
 	private static Method findMethod(Object instance, String name,
-			Class<?>... parameterTypes) throws NoSuchMethodException {
+									 Class<?>... parameterTypes) throws NoSuchMethodException {
 		for (Class<?> clazz = instance.getClass(); clazz != null; clazz = clazz
 				.getSuperclass()) {
 			try {
@@ -268,16 +264,13 @@ public class AssetsMultiDexLoader {
 	 * Replace the value of a field containing a non null array, by a new array
 	 * containing the elements of the original array plus the elements of
 	 * extraElements.
-	 * 
-	 * @param instance
-	 *            the instance whose field is to be modified.
-	 * @param fieldName
-	 *            the field to modify.
-	 * @param extraElements
-	 *            elements to append at the end of the array.
+	 *
+	 * @param instance      the instance whose field is to be modified.
+	 * @param fieldName     the field to modify.
+	 * @param extraElements elements to append at the end of the array.
 	 */
 	private static void expandFieldArray(Object instance, String fieldName,
-			Object[] extraElements) throws NoSuchFieldException,
+										 Object[] extraElements) throws NoSuchFieldException,
 			IllegalArgumentException, IllegalAccessException {
 		Field jlrField = findField(instance, fieldName);
 		Object[] original = (Object[]) jlrField.get(instance);
@@ -319,18 +312,15 @@ public class AssetsMultiDexLoader {
 		}
 	}
 
-	/**
-	 * Installer for platform versions 19.
-	 */
-	private static final class V19 {
+	private static final class V23 {
 
 		private static void install(ClassLoader loader,
-				List<File> additionalClassPathEntries, File optimizedDirectory)
+									List<File> additionalClassPathEntries, File optimizedDirectory)
 				throws IllegalArgumentException, IllegalAccessException,
 				NoSuchFieldException, InvocationTargetException,
 				NoSuchMethodException {
-			/*
-			 * The patched class loader is expected to be a descendant of
+            /*
+             * The patched class loader is expected to be a descendant of
 			 * dalvik.system.BaseDexClassLoader. We modify its
 			 * dalvik.system.DexPathList pathList field to append additional DEX
 			 * file entries.
@@ -342,7 +332,7 @@ public class AssetsMultiDexLoader {
 					dexPathList,
 					"dexElements",
 					makeDexElements(dexPathList, new ArrayList<File>(
-							additionalClassPathEntries), optimizedDirectory,
+									additionalClassPathEntries), optimizedDirectory,
 							suppressedExceptions));
 			if (suppressedExceptions.size() > 0) {
 				for (IOException e : suppressedExceptions) {
@@ -378,8 +368,79 @@ public class AssetsMultiDexLoader {
 		 * .
 		 */
 		private static Object[] makeDexElements(Object dexPathList,
-				ArrayList<File> files, File optimizedDirectory,
-				ArrayList<IOException> suppressedExceptions)
+												ArrayList<File> files, File optimizedDirectory,
+												ArrayList<IOException> suppressedExceptions)
+				throws IllegalAccessException, InvocationTargetException,
+				NoSuchMethodException {
+			Method makeDexElements = findMethod(dexPathList, "makePathElements",
+					List.class, File.class, List.class);
+
+			return (Object[]) makeDexElements.invoke(dexPathList, files,
+					optimizedDirectory, suppressedExceptions);
+		}
+	}
+
+	/**
+	 * Installer for platform versions 19.
+	 */
+	private static class V19 {
+
+		private static void install(ClassLoader loader,
+									List<File> additionalClassPathEntries, File optimizedDirectory)
+				throws IllegalArgumentException, IllegalAccessException,
+				NoSuchFieldException, InvocationTargetException,
+				NoSuchMethodException {
+            /*
+             * The patched class loader is expected to be a descendant of
+			 * dalvik.system.BaseDexClassLoader. We modify its
+			 * dalvik.system.DexPathList pathList field to append additional DEX
+			 * file entries.
+			 */
+			Field pathListField = findField(loader, "pathList");
+			Object dexPathList = pathListField.get(loader);
+			ArrayList<IOException> suppressedExceptions = new ArrayList<IOException>();
+			expandFieldArray(
+					dexPathList,
+					"dexElements",
+					makeDexElements(dexPathList, new ArrayList<File>(
+									additionalClassPathEntries), optimizedDirectory,
+							suppressedExceptions));
+			if (suppressedExceptions.size() > 0) {
+				for (IOException e : suppressedExceptions) {
+					Log.w(TAG, "Exception in makeDexElement", e);
+				}
+				Field suppressedExceptionsField = findField(loader,
+						"dexElementsSuppressedExceptions");
+				IOException[] dexElementsSuppressedExceptions = (IOException[]) suppressedExceptionsField
+						.get(loader);
+
+				if (dexElementsSuppressedExceptions == null) {
+					dexElementsSuppressedExceptions = suppressedExceptions
+							.toArray(new IOException[suppressedExceptions
+									.size()]);
+				} else {
+					IOException[] combined = new IOException[suppressedExceptions
+							.size() + dexElementsSuppressedExceptions.length];
+					suppressedExceptions.toArray(combined);
+					System.arraycopy(dexElementsSuppressedExceptions, 0,
+							combined, suppressedExceptions.size(),
+							dexElementsSuppressedExceptions.length);
+					dexElementsSuppressedExceptions = combined;
+				}
+
+				suppressedExceptionsField.set(loader,
+						dexElementsSuppressedExceptions);
+			}
+		}
+
+		/**
+		 * A wrapper around
+		 * {@code private static final dalvik.system.DexPathList#makeDexElements}
+		 * .
+		 */
+		private static Object[] makeDexElements(Object dexPathList,
+												ArrayList<File> files, File optimizedDirectory,
+												ArrayList<IOException> suppressedExceptions)
 				throws IllegalAccessException, InvocationTargetException,
 				NoSuchMethodException {
 			Method makeDexElements = findMethod(dexPathList, "makeDexElements",
@@ -396,12 +457,12 @@ public class AssetsMultiDexLoader {
 	private static final class V14 {
 
 		private static void install(ClassLoader loader,
-				List<File> additionalClassPathEntries, File optimizedDirectory)
+									List<File> additionalClassPathEntries, File optimizedDirectory)
 				throws IllegalArgumentException, IllegalAccessException,
 				NoSuchFieldException, InvocationTargetException,
 				NoSuchMethodException {
-			/*
-			 * The patched class loader is expected to be a descendant of
+            /*
+             * The patched class loader is expected to be a descendant of
 			 * dalvik.system.BaseDexClassLoader. We modify its
 			 * dalvik.system.DexPathList pathList field to append additional DEX
 			 * file entries.
@@ -421,7 +482,7 @@ public class AssetsMultiDexLoader {
 		 * .
 		 */
 		private static Object[] makeDexElements(Object dexPathList,
-				ArrayList<File> files, File optimizedDirectory)
+												ArrayList<File> files, File optimizedDirectory)
 				throws IllegalAccessException, InvocationTargetException,
 				NoSuchMethodException {
 			Method makeDexElements = findMethod(dexPathList, "makeDexElements",
@@ -437,11 +498,11 @@ public class AssetsMultiDexLoader {
 	 */
 	private static final class V4 {
 		private static void install(ClassLoader loader,
-				List<File> additionalClassPathEntries)
+									List<File> additionalClassPathEntries)
 				throws IllegalArgumentException, IllegalAccessException,
 				NoSuchFieldException, IOException {
-			/*
-			 * The patched class loader is expected to be a descendant of
+            /*
+             * The patched class loader is expected to be a descendant of
 			 * dalvik.system.DexClassLoader. We modify its fields mPaths,
 			 * mFiles, mZips and mDexs to append additional DEX file entries.
 			 */
@@ -456,7 +517,7 @@ public class AssetsMultiDexLoader {
 			ZipFile[] extraZips = new ZipFile[extraSize];
 			DexFile[] extraDexs = new DexFile[extraSize];
 			for (ListIterator<File> iterator = additionalClassPathEntries
-					.listIterator(); iterator.hasNext();) {
+					.listIterator(); iterator.hasNext(); ) {
 				File additionalEntry = iterator.next();
 				String entryPath = additionalEntry.getAbsolutePath();
 				path.append(':').append(entryPath);
